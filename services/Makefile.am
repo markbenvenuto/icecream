@@ -6,8 +6,8 @@ libicecc_la_LIBADD = \
 	$(LIBCAP_NG_LIBS) \
 	$(DL_LDADD)
 
-libicecc_la_CFLAGS = -fPIC -DPIC
-libicecc_la_CXXFLAGS = -fPIC -DPIC
+libicecc_la_CFLAGS =
+libicecc_la_CXXFLAGS =
 
 icedir = $(includedir)/icecc
 ice_HEADERS = \

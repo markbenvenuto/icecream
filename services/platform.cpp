@@ -54,7 +54,11 @@ std::string determine_platform_once()
     }
 
     if (os != "Linux") {
+#ifdef __CYGWIN__
+        platform = "x86_64";
+#else
         platform = os + '_' + uname_buf.machine;
+#endif
     } else { // Linux
         platform = uname_buf.machine;
     }

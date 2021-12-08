@@ -864,10 +864,16 @@ MsgChannel *Service::createChannel(const string &socket_path)
 
     if (connect(remote_fd, (struct sockaddr *) &remote_addr, sizeof(remote_addr)) < 0) {
         log_perror_trace("connect");
-        trace() << "connect failed on " << socket_path << endl;
+        trace() << "connect2 failed on " << socket_path << endl;
         if ((-1 == close(remote_fd)) && (errno != EBADF)){
             log_perror("close failed");
         }
+
+        struct stat buf1;
+        int ret = stat(socket_path.c_str(), &buf1);
+        trace() << "stat " << ret << endl;
+        log_perror_trace("stat");
+
         return nullptr;
     }
 

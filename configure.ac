@@ -73,7 +73,7 @@ if test "$GCC" = yes; then
 -Wshadow -Wpointer-arith $cast_align -Wwrite-strings \
 -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes \
 -Wnested-externs -Wundef $CFLAGS"
-    CXXFLAGS=" -g -Wall -Wextra -Wpointer-arith $cast_align $wshadow -Wwrite-strings -Wundef $CXXFLAGS"
+    CXXFLAGS=" -g -Wall -Wextra -Wpointer-arith $cast_align $wshadow -Wwrite-strings -Wundef -D_GNU_SOURCE $CXXFLAGS"
     AC_MSG_NOTICE([Adding gcc options: $CFLAGS])
 fi
 
@@ -204,7 +204,7 @@ if test x"$ac_cv_func_connect" = x"no"; then
     esac
     dnl We can't just call AC_CHECK_FUNCS(connect) here, because the value
     dnl has been cached.
-    if test x"$ac_cv_lib_socket_connect" = x"yes" || 
+    if test x"$ac_cv_lib_socket_connect" = x"yes" ||
        test x"$ac_cv_lib_inet_connect" = x"yes"; then
         # ac_cv_func_connect=yes
         # don't!  it would cause AC_CHECK_FUNC to succeed next time configure is run

@@ -45,8 +45,30 @@ const char *rs_program_name = "icecc";
 
 #define CLIENT_DEBUG 0
 
+
+std::size_t replace_all(std::string& inout, const std::string& what, const std::string& with)
+{
+    std::size_t count{};
+    for (std::string::size_type pos{};
+         inout.npos != (pos = inout.find(what.data(), pos, what.length()));
+         pos += with.length(), ++count) {
+        inout.replace(pos, what.length(), with.data(), with.length());
+    }
+    return count;
+}
+
 static string compiler_path_lookup_helper(const string &compiler, const string &compiler_path)
 {
+    // Windows style path?
+    // Translate to cygwin?
+    if (compiler_path.find(':') == 1) {
+        std::string suffix = compiler_path.substr(2);
+        replace_all(suffix, "\\", "/");
+
+        char drive = compiler_path[0];
+        return std::string("/cygdrive/") + drive + suffix;
+    }
+
     if (compiler_path.find('/') != string::npos) {
         return compiler_path;
     }
@@ -200,7 +222,12 @@ bool compiler_only_rewrite_includes(const CompileJob &job)
 
 string clang_get_default_target(const CompileJob &job)
 {
+#ifdef __CYGWIN__
+    // clang-cl does not accept -dumpmachine, clang.exe does
+    return "x86_64-pc-windows-msvc";
+#else
     return read_command_line( find_compiler( job ), { "-dumpmachine" } );
+#endif
 }
 
 bool compiler_get_arch_flags(const CompileJob& job, bool march, bool mcpu, bool mtune, list<string>& args)
@@ -341,7 +368,7 @@ int build_local(CompileJob &job, MsgChannel *local_daemon, struct rusage *used)
         arguments.push_back(job.outputFile());
     }
 
-    vector<char*> argv; 
+    vector<char*> argv;
     string argstxt;
 
     for (list<string>::const_iterator it = arguments.begin(); it != arguments.end(); ++it) {

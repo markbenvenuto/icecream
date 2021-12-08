@@ -679,7 +679,7 @@ bool Daemon::setup_listen_unix_fd()
             strncpy(myaddr.sun_path, default_socket.c_str() , sizeof(myaddr.sun_path) - 1);
             myaddr.sun_path[sizeof(myaddr.sun_path) - 1] = '\0';
             if(default_socket.length() > sizeof(myaddr.sun_path) - 1) {
-                log_error() << "default socket path too long for sun_path" << endl;	
+                log_error() << "default socket path too long for sun_path" << endl;
             }
             if (-1 == unlink(myaddr.sun_path) && errno != ENOENT){
                 log_perror("unlink failed") << "\t" << myaddr.sun_path << endl;
@@ -692,6 +692,8 @@ bool Daemon::setup_listen_unix_fd()
                 socket_path.append("/.iceccd.socket");
                 strncpy(myaddr.sun_path, socket_path.c_str(), sizeof(myaddr.sun_path) - 1);
                 myaddr.sun_path[sizeof(myaddr.sun_path) - 1] = '\0';
+                log_error() << "Listening on " << socket_path << endl;
+
                 if(socket_path.length() > sizeof(myaddr.sun_path) - 1) {
                     log_error() << "$HOME/.iceccd.socket path too long for sun_path" << endl;
                 }
@@ -2104,6 +2106,8 @@ void Daemon::answer_client_requests()
         if (listen_fd != -1) {
             struct sockaddr cli_addr;
             socklen_t cli_len = sizeof cli_addr;
+            trace() << "acceptting...." << endl;
+
             int acc_fd = accept(listen_fd, &cli_addr, &cli_len);
 
             if (acc_fd < 0) {

@@ -709,6 +709,14 @@ bool analyse_argv(const char * const *argv, CompileJob &job, bool icerun, list<s
                 if (argv[i + 1]) {
                     args.append(argv[++i], Arg_Rest);
                 }
+            } else if (str_startswith("-iceenv:", a)) {
+                string env_long = string(a + 8);
+                size_t pos = env_long.find("=");
+                string env_name = env_long.substr(0, pos);
+                string env_value = env_long.substr(pos + 1);
+                log_warning() << "setting env " << env_name << " -- "  << env_value << endl;
+                setenv(env_name.c_str(), env_value.c_str(), false);
+
             } else {
                 args.append(a, Arg_Rest);
 
@@ -720,6 +728,23 @@ bool analyse_argv(const char * const *argv, CompileJob &job, bool icerun, list<s
             }
         } else if (a[0] == '@') {
             args.append(a, Arg_Local);
+        } else if (a[0] == '/') {
+            // clang-cl argument
+            if(!strcmp(a, "/c")) {
+                seen_c = true;
+                explicit_color_diagnostics = true;
+            } else if ( str_startswith("/D", a)) {
+                args.append(a, Arg_Cpp);
+            } else if (str_startswith("/I", a)) {
+                args.append(a, Arg_Local);
+            } else if ( str_startswith("/Fo", a)) {
+                ofile = a + 3;
+            } else {
+                args.append(a, Arg_Rest);
+
+                log_error() << "unknown arg " << a <<endl;
+            }
+
         } else {
             args.append(a, Arg_Rest);
         }
@@ -764,7 +789,7 @@ bool analyse_argv(const char * const *argv, CompileJob &job, bool icerun, list<s
             if (it->first == "-Xclang" || it->first == "-x" || is_argument_with_space(it->first.c_str())) {
                 ++it;
                 ++it;
-            } else if (it->second != Arg_Rest || it->first.at(0) == '-'
+            } else if (it->second != Arg_Rest || it->first.at(0) == '-'  || it->first.at(0) == '/'
                        || it->first.at(0) == '@') {
                 ++it;
             } else if (ifile.empty()) {
@@ -897,8 +922,8 @@ bool analyse_argv(const char * const *argv, CompileJob &job, bool icerun, list<s
         // host platform. Therefore explicitly ask for our platform.
         string default_target = clang_get_default_target(job);
         if( !default_target.empty()) {
-            args.append("-target", Arg_Remote);
-            args.append(default_target, Arg_Remote);
+            args.append("--target=" + default_target, Arg_Remote);
+            // args.append(default_target, Arg_Remote);
         } else {
             always_local = true;
             log_error() << "failed to read default clang host platform, building locally" << endl;

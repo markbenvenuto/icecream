@@ -166,6 +166,7 @@ pid_t call_cpp(CompileJob &job, int fdwrite, int fdread)
         argc++; // the program
         argc += 2; // -E file.i
         argc += 1; // -frewrite-includes / -fdirectives-only
+        //argc += 1; // if clang-cl TODO
         argv = new char*[argc + 1];
         argv[0] = strdup(find_compiler(job).c_str());
         int i = 1;
@@ -179,7 +180,7 @@ pid_t call_cpp(CompileJob &job, int fdwrite, int fdread)
 
         if (compiler_only_rewrite_includes(job)) {
             if( compiler_is_clang(job)) {
-                argv[i++] = strdup("-frewrite-includes");
+                argv[i++] = strdup("/clang:-frewrite-includes");
             } else { // gcc
                 argv[i++] = strdup("-fdirectives-only");
             }
