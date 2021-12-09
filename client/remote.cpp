@@ -875,7 +875,7 @@ int build_remote(CompileJob &job, MsgChannel *local_daemon, const Environments &
                        minimalRemoteVersion(job), requiredRemoteFeatures(),
                        get_niceness());
 
-        trace() << "asking for host to use: " << preferred_host << " on target: " << job.targetPlatform() << endl;
+        //trace() << "asking for host to use2: " << preferred_host << " on target: " << job.targetPlatform() << endl;
         if (!local_daemon->send_msg(getcs)) {
             log_warning() << "asked for CS" << endl;
             throw client_error(24, "Error 24 - asked for CS");

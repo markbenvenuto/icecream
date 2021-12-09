@@ -741,8 +741,6 @@ bool analyse_argv(const char * const *argv, CompileJob &job, bool icerun, list<s
                 ofile = a + 3;
             } else {
                 args.append(a, Arg_Rest);
-
-                log_error() << "unknown arg " << a <<endl;
             }
 
         } else {

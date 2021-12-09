@@ -37,6 +37,16 @@ int create_large_pipe( int pipefds[ 2 ] )
     // max size, so if available, it should be the second one.
     // The maximum for SO_SNDBUF seems to be just 256KiB, so that one goes
     // last.
+#ifdef __CYGWIN__
+    // socketpair does not work on Windows so just use a regular pipe
+    // WriteFile returns invalid parameter but I am not sure how cygwin is emultating a unix domain socket
+    // TODO - are they using overlapped?
+    if( pipe( pipefds ) == 0 )
+    {
+        return 0;
+    }
+#endif
+
 #ifdef F_SETPIPE_SZ
     if( pipe( pipefds ) == 0 )
     {

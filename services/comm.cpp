@@ -2142,6 +2142,94 @@ void CompileFileMsg::fill_from_channel(MsgChannel *c)
     }
 }
 
+
+string to_str(list<string> l)
+{
+    string str("[");
+    for (const std::string &s : l) {
+        if(str.size() >1) {
+            str +=',';
+        }
+        str += s;
+    }
+    str += "]";
+    return str;
+} 
+
+
+inline bool str_equal(const char* a, const char* b)
+{
+    return strcmp(a, b) == 0;
+}
+
+inline int str_startswith2( const char *worm , const char *head)
+{
+    return !strncmp(head, worm, strlen(head));
+}
+
+list<string> convert_clangcl_to_clang(list<string> args) {
+    // Remote machines have hardcoded ways of working with clang and gcc, they do not understand clang-cl so convert clang-cl to clang
+    // clang already does this - llvm-project/clang/lib/Driver/ToolChains/Clang.cpp
+    list<string> ret;
+        trace() << "Remote compile convert restFlags: " << to_str(args) << endl;
+
+    for (const std::string &s : args) {
+        const char* a = s.c_str();
+        // Passthrough - args as they are not MSVC ops
+        if(s[0] == '-') {
+            ret.push_back(s);
+        } else if (str_startswith2(a, "/wd")) {
+            // ignore warnings
+        } else if (str_startswith2(a, "/D")) {
+            ret.push_back("-" + s.substr(1) );
+        } else if (str_equal(a, "/Z7")) {
+            ret.push_back("-gcodeview");
+        } else if (str_equal(a, "/Od")) {
+            ret.push_back("-O0");
+        } else if (str_startswith2(a, "/std")) {
+            ret.push_back("-std=c++17");
+        } else if (str_startswith2(a, "/EHsc")) {
+            ret.push_back("-fcxx-exceptions");
+            ret.push_back("-fexceptions");
+        } else if (str_equal(a, "/MD")) {
+            ret.push_back("-D_MT");
+            ret.push_back("-D_DLL");
+            ret.push_back("-Xclang");
+            ret.push_back("--dependent-lib=msvcrt");
+        } else if (str_equal(a, "/MDd")) {
+            ret.push_back("-D_DEBUG");
+            ret.push_back("-D_MT");
+            ret.push_back("-D_DLL");
+            ret.push_back("-Xclang");
+            ret.push_back("--dependent-lib=msvcrtd");
+        } else if (str_equal(a, "/MT")) {
+            ret.push_back("-D_MT");
+            ret.push_back("-flto-visibility-public-std");
+            ret.push_back("-Xclang");
+            ret.push_back("--dependent-lib=libcmt");
+        } else if (str_equal(a, "/MTd")) {
+            ret.push_back("-D_DEBUG");
+            ret.push_back("-D_MT");
+            ret.push_back("-flto-visibility-public-std");
+            ret.push_back("-Xclang");
+            ret.push_back("--dependent-lib=libcmtd");
+        }
+    }
+
+
+    ret.push_back("-Xclang");
+    ret.push_back("--dependent-lib=oldnames");
+
+
+    ret.push_back("-D_WIN32");
+    ret.push_back("-D_WIN64");
+
+    ret.push_back("-fms-compatibility");
+    ret.push_back("-fms-extensions");
+
+    return ret;
+}
+
 void CompileFileMsg::send_to_channel(MsgChannel *c) const
 {
     Msg::send_to_channel(c);
@@ -2152,28 +2240,49 @@ void CompileFileMsg::send_to_channel(MsgChannel *c) const
         // By the time we're compiling, the args are all Arg_Remote or Arg_Rest and
         // we no longer care about the differences, but we may care about the ordering.
         // So keep them all in one list.
-        *c << job->nonLocalFlags();
+        list<string> nonlocal;
+        if(job->compilerName().find("clang-cl") != string::npos) {
+            nonlocal = convert_clangcl_to_clang(job->nonLocalFlags());
+        } else {
+            nonlocal = job->nonLocalFlags();
+        }
+        *c << nonlocal;
+        trace() << "Remote compile NonLocal: " << to_str(nonlocal) << endl;
     } else {
         if (IS_PROTOCOL_30(c)) {
             *c << job->remoteFlags();
+            trace() << "Remote compile RemoteFlags: " << to_str(job->remoteFlags()) << endl;
         } else {
             if (job->compilerName().find("clang") != string::npos) {
                 // Hack for compilerwrapper.
                 std::list<std::string> flags = job->remoteFlags();
                 flags.push_front("clang");
                 *c << flags;
+                trace() << "Remote compile flags: " << to_str(flags) << endl;
             } else {
                 *c << job->remoteFlags();
+                trace() << "Remote compile RemoteFlags2: " << to_str(job->remoteFlags()) << endl;
             }
         }
-        *c << job->restFlags();
+        list<string> rest;
+        if(job->compilerName().find("clang-cl") != string::npos) {
+            rest = convert_clangcl_to_clang(job->restFlags());
+        } else {
+            rest = job->restFlags();
+        }
+        *c << rest;
+        trace() << "Remote compile restFlags: " << to_str(rest) << endl;
+
     }
 
     *c << job->environmentVersion();
+        trace() << "Remote compile environmentVersion: " << job->environmentVersion() << endl;
     *c << job->targetPlatform();
+        trace() << "Remote compile targetPlatform: " << job->targetPlatform() << endl;
 
     if (IS_PROTOCOL_30(c)) {
         *c << remote_compiler_name();
+        trace() << "Remote compile remote_compiler_name: " << remote_compiler_name() << endl;
     }
     if( IS_PROTOCOL_34(c)) {
         *c << job->inputFile();
@@ -2191,6 +2300,10 @@ void CompileFileMsg::send_to_channel(MsgChannel *c) const
 // hardcoded).  For clang, the binary is just clang for both C/C++.
 string CompileFileMsg::remote_compiler_name() const
 {
+    // if (job->compilerName().find("clang-cl") != string::npos) {
+    //     return "clang-cl";
+    // }
+
     if (job->compilerName().find("clang") != string::npos) {
         return "clang";
     }
